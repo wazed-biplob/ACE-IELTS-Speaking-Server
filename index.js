@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import cors from "cors";
 import multer from "multer";
-import OpenAI from "openai";
+
 import fs from "fs";
 dotenv.config();
 
@@ -103,52 +103,48 @@ app.get("/", (req, res) => {
   res.send("Hello! The IELTS server is running.");
 });
 
-// import express from "express";
-// import multer from "multer";
-// import fs from "fs";
-// import { createClient } from "@deepgram/sdk";
-// import dotenv from "dotenv";
-// import cors from "cors";
-// dotenv.config();
-// const app = express();
-// const upload = multer({ dest: "uploads/" });
+import { createClient } from "@deepgram/sdk";
 
-// app.use(express.json());
-// app.use(cors());
+const deepgram = createClient(process.env.DEEPGRAM_API_KEY);
 
-// const deepgram = createClient(process.env.DEEPGRAM_API_KEY);
+// POST /transcribe-file
+app.post("/transcribe-file", upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
-// // POST /transcribe-file
-// app.post("/transcribe-file", upload.single("file"), async (req, res) => {
-//   try {
-//     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+    const filePath = req.file.path;
+    console.log("Received file:", req.file);
 
-//     const filePath = req.file.path;
-//     console.log("Received file:", req.file);
+    // Read file contents
+    const fileBuffer = fs.readFileSync(filePath);
 
-//     // Read file contents
-//     const fileBuffer = fs.readFileSync(filePath);
+    // Transcribe using Deepgram SDK
+    const { result, error } = await deepgram.listen.prerecorded.transcribeFile(
+      fileBuffer,
+      {
+        model: "nova-3",
+        smart_format: true,
+      }
+    );
 
-//     // Transcribe using Deepgram SDK
-//     const { result, error } = await deepgram.listen.prerecorded.transcribeFile(
-//       fileBuffer,
-//       {
-//         model: "nova-3",
-//         smart_format: true,
-//       }
-//     );
+    // Delete temp file
+    fs.unlink(filePath, () => {});
 
-//     // Delete temp file
-//     fs.unlink(filePath, () => {});
+    if (error) return res.status(500).json({ error });
 
-//     if (error) return res.status(500).json({ error });
-
-//     res.json({ result });
-//     console.log("Full Deepgram response:", JSON.stringify(result, null, 2));
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ error: err.message });
-//   }
-// });
+    res.json({ result });
+    console.log(
+      "Full Deepgram response:",
+      JSON.stringify(
+        result.results.channels[0].alternatives[0].transcript,
+        null,
+        2
+      )
+    );
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // app.listen(5000, () => console.log("Server running on http://localhost:5000"));
