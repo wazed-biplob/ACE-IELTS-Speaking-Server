@@ -3,13 +3,33 @@ import dotenv from "dotenv";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import cors from "cors";
 import multer from "multer";
-
 import fs from "fs";
+import { MongoClient } from "mongodb";
+
 dotenv.config();
 
-const app = express();
+export const app = express();
+
 app.use(express.json());
 app.use(cors());
+
+const uri = process.env.DB_URL; // replace with your MongoDB URI
+const client = new MongoClient(uri);
+
+let db;
+
+async function connectDB() {
+  try {
+    await client.connect();
+    console.log("✅ Connected to MongoDB");
+    db = client.db("ace_ielts"); // your database name
+  } catch (err) {
+    console.error("❌ Failed to connect to MongoDB", err);
+  }
+}
+
+connectDB();
+
 const upload = multer({ dest: "uploads/" });
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
@@ -99,21 +119,17 @@ app.listen(process.env.PORT, () =>
   console.log(`🚀 IELTS server running at http://localhost:${process.env.PORT}`)
 );
 
-app.get("/", (req, res) => {
-  res.send("Hello! The IELTS server is running.");
-});
-
 import { createClient } from "@deepgram/sdk";
+// import router from "./app/routes/route";
 
 const deepgram = createClient(process.env.DEEPGRAM_API_KEY);
-
+// app.use("/api/v1", router);
 // POST /transcribe-file
 app.post("/transcribe-file", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
     const filePath = req.file.path;
-    console.log("Received file:", req.file);
 
     // Read file contents
     const fileBuffer = fs.readFileSync(filePath);
@@ -133,13 +149,19 @@ app.post("/transcribe-file", upload.single("file"), async (req, res) => {
     if (error) return res.status(500).json({ error });
 
     res.json({ result });
-    console.log(
-      "Full Deepgram response:",
-      JSON.stringify(
-        result.results.channels[0].alternatives[0].transcript,
-        null,
-        2
-      )
+
+    const question = req.body.question || "No question provided";
+
+    const answer = result.results.channels[0].alternatives[0].transcript;
+
+    await db.collection("papers").updateOne(
+      {},
+      {
+        $push: {
+          part1: { question: question, answer: answer },
+        },
+      },
+      { upsert: true }
     );
   } catch (err) {
     console.error(err);
