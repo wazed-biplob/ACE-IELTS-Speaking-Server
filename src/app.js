@@ -106,14 +106,17 @@ import { createClient } from "@deepgram/sdk";
 const deepgram = createClient(process.env.DEEPGRAM_API_KEY);
 // app.use("/api/v1", router);
 // POST /transcribe-file
+
 app.post("/transcribe-file", upload.single("file"), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
 
-    const filePath = req.file.path;
+    // Access file directly from memory
+    const fileBuffer = req.file.buffer;
 
-    const fileBuffer = fs.readFileSync(filePath);
-
+    // Send file buffer to Deepgram (or any other transcription API)
     const { result, error } = await deepgram.listen.prerecorded.transcribeFile(
       fileBuffer,
       {
@@ -122,26 +125,21 @@ app.post("/transcribe-file", upload.single("file"), async (req, res) => {
       }
     );
 
-    fs.unlink(filePath, (err) => {
-      if (err) {
-        console.error("Failed to delete file:", err);
-        return res.status(500).json({ error: "Could not delete file" });
-      }
-      console.log("File deleted successfully");
-    });
-
     if (error) return res.status(500).json({ error });
 
     const phase = req.body.phase;
     const question = req.body.question || "No question provided";
 
     const answer = result?.results?.channels[0]?.alternatives[0]?.transcript;
+
+    // Send response to client
     res.json({ transcript: answer });
 
-    console.log(phase, question, filePath, answer);
+    console.log(phase, question, answer);
 
+    // Save transcript to database
     await db.collection("papers").updateOne(
-      {}, // filter
+      {}, // filter (you might want to customize this)
       {
         $push: {
           [phase]: { question, answer }, // dynamic key
@@ -154,5 +152,6 @@ app.post("/transcribe-file", upload.single("file"), async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+app.listen(process.env.PORT, (req, res) => console.log("server ok"));
 
 export default app;
