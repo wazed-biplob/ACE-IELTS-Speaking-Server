@@ -99,10 +99,6 @@ app.post("/exam/evaluate", async (req, res) => {
   }
 });
 
-app.listen(process.env.PORT, () =>
-  console.log(`🚀 IELTS server running at http://localhost:${process.env.PORT}`)
-);
-
 import { createClient } from "@deepgram/sdk";
 // import router from "./app/routes/route";
 
