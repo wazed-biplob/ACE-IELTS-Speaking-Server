@@ -1,6 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+// import { GoogleGenerativeAI } from "@google/generative-ai";
 import cors from "cors";
 import multer from "multer";
 import fs from "fs";
@@ -31,8 +31,8 @@ async function connectDB() {
 connectDB();
 
 const upload = multer({ dest: "uploads/" });
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+// const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 app.post("/exam/question", async (req, res) => {
   const { part } = req.body;
