@@ -34,6 +34,8 @@ const upload = multer({ dest: "uploads/" });
 // const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
+app.get("/", (req, res) => res.send("ACE IELTS Server is Running OK!"));
+
 app.post("/exam/question", async (req, res) => {
   const { part } = req.body;
   console.log("part", part);
