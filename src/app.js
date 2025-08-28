@@ -32,59 +32,32 @@ connectDB();
 
 const upload = multer({ dest: "uploads/" });
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-// const client = new OpenAI({
-//   apiKey: process.env.OPENAI_API_KEY,
-// });
-// Step 1: Get exam question for a given part
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
 app.post("/exam/question", async (req, res) => {
   const { part } = req.body;
 
-  const prompts = {
-    1: "You are an IELTS examiner. Ask 12 personal introduction questions for IELTS Speaking Part 1",
-    2: "You are an IELTS examiner. Give ONE cue card for IELTS Speaking Part 2.",
-    3: "You are an IELTS examiner. Ask 5 advanced discussion questions related to Part 2 topic for IELTS Speaking Part 3.",
-  };
+  // const prompts = {
+  //   1: "You are an IELTS examiner. Ask 2 personal introduction questions for IELTS Speaking Part 1",
+  //   2: "You are an IELTS examiner. Give ONE cue card for IELTS Speaking Part 2.",
+  //   3: "You are an IELTS examiner. Ask 5 advanced discussion questions related to Part 2 topic for IELTS Speaking Part 3.",
+  // };
 
-  const result = await model.generateContent(prompts[part]);
-  res.json({ question: result.response.text() });
+  if (part === 1) {
+    res.json({
+      question:
+        "Alright, hello! I'm your examiner today. We're going to start with a few questions to get to know you a little better.\n\n**Question 1:** Can you tell me your full name, please?\n\n**Question 2:** And what do you do, do you work or are you a student?",
+    });
+  } else if (part === 2) {
+    // const result = await model.generateContent(
+    //   "You are an IELTS examiner. Give ONE cue card for IELTS Speaking Part 2."
+    // );
+    res.json({
+      question:
+        "Here is your cue card:\n\n---\n\n**Describe a challenging experience you had when learning something new.**\n\nYou should say:\n\n*   what you were trying to learn\n*   what made it challenging for you\n*   how you eventually overcame the difficulties\n\nand explain how this experience changed your perspective on learning.\n\n---\nYou will have one minute to prepare your answer, and then you will speak for one to two minutes.",
+    });
+  }
 });
-
-// app.post("/transcribe", upload.single("file"), async (req, res) => {
-//   try {
-//     const filePath = req.file.path;
-
-//     console.log("Received file:", req.file); // <--- Add this
-//     console.log("File path exists?", fs.existsSync(req.file.path));
-
-//     // Prepare form-data
-//     const formData = new FormData();
-//     formData.append("file", fs.createReadStream(filePath));
-
-//     // Call Deepgram API
-//     const response = await fetch("https://api.deepgram.com/v1/listen", {
-//       method: "POST",
-//       headers: {
-//         Authorization: `Token ${process.env.DEEPGRAM_API_KEY}`, // 👈 Secure key
-//       },
-//       body: formData,
-//     });
-
-//     const data = await response.json();
-
-//     // Extract transcript safely
-//     const transcript =
-//       data.results?.channels?.[0]?.alternatives?.[0]?.transcript || "";
-
-//     res.json({ text: transcript });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ error: "Transcription failed" });
-//   } finally {
-//     // Optional: delete uploaded file after processing
-//     fs.unlink(req.file.path, () => {});
-//   }
-// });
 
 // Step 2: Evaluate candidate’s answer
 app.post("/exam/evaluate", async (req, res) => {
@@ -131,10 +104,8 @@ app.post("/transcribe-file", upload.single("file"), async (req, res) => {
 
     const filePath = req.file.path;
 
-    // Read file contents
     const fileBuffer = fs.readFileSync(filePath);
 
-    // Transcribe using Deepgram SDK
     const { result, error } = await deepgram.listen.prerecorded.transcribeFile(
       fileBuffer,
       {
@@ -143,22 +114,29 @@ app.post("/transcribe-file", upload.single("file"), async (req, res) => {
       }
     );
 
-    // Delete temp file
-    fs.unlink(filePath, () => {});
+    fs.unlink(filePath, (err) => {
+      if (err) {
+        console.error("Failed to delete file:", err);
+        return res.status(500).json({ error: "Could not delete file" });
+      }
+      console.log("File deleted successfully");
+    });
 
     if (error) return res.status(500).json({ error });
 
-    res.json({ result });
-
+    const phase = req.body.phase;
     const question = req.body.question || "No question provided";
 
-    const answer = result.results.channels[0].alternatives[0].transcript;
+    const answer = result?.results?.channels[0]?.alternatives[0]?.transcript;
+    res.json({ transcript: answer });
+
+    console.log(phase, question, filePath, answer);
 
     await db.collection("papers").updateOne(
-      {},
+      {}, // filter
       {
         $push: {
-          part1: { question: question, answer: answer },
+          [phase]: { question, answer }, // dynamic key
         },
       },
       { upsert: true }
@@ -168,5 +146,3 @@ app.post("/transcribe-file", upload.single("file"), async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
-// app.listen(5000, () => console.log("Server running on http://localhost:5000"));
