@@ -29,8 +29,9 @@ async function connectDB() {
 }
 
 connectDB();
+const storage = multer.memoryStorage();
 
-const upload = multer({ dest: "uploads/" });
+const upload = multer({ storage });
 // const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
