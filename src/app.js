@@ -36,6 +36,7 @@ const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 app.post("/exam/question", async (req, res) => {
   const { part } = req.body;
+  console.log("part", part);
 
   // const prompts = {
   //   1: "You are an IELTS examiner. Ask 2 personal introduction questions for IELTS Speaking Part 1",
@@ -55,6 +56,14 @@ app.post("/exam/question", async (req, res) => {
     res.json({
       question:
         "Here is your cue card:\n\n---\n\n**Describe a challenging experience you had when learning something new.**\n\nYou should say:\n\n*   what you were trying to learn\n*   what made it challenging for you\n*   how you eventually overcame the difficulties\n\nand explain how this experience changed your perspective on learning.\n\n---\nYou will have one minute to prepare your answer, and then you will speak for one to two minutes.",
+    });
+  } else if (part === 3) {
+    // const result = await model.generateContent(
+    //   "Ask 5 simple discussion questions related to Part 2 topic for IELTS Speaking Part 3. Part 2 Topic was : Describe a challenging Experience."
+    // );
+    res.json({
+      question:
+        'Here are 5 simple discussion questions suitable for IELTS Speaking Part 3, related to the Part 2 topic "Describe a challenging experience":\n\n1.  **What are the main benefits people gain from overcoming difficult experiences?** (Focuses on personal growth and learning)\n2.  **Do you think society encourages people to face challenges, or to avoid them?** (Asks about societal attitudes and values)\n3.  **How do challenges faced by young people today compare to those faced by previous generations?** (Invites comparison and discussion of changing times)\n4.  **What kind of support systems do people typically rely on when going through a difficult period?** (Explores resources and community support)\n5.  **Do you think it\'s better to avoid difficult situations if possible, or to actively seek them out for personal growth?** (Presents a philosophical dilemma requiring justification)',
     });
   }
 });
