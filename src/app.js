@@ -1,11 +1,11 @@
 import express from "express";
 import dotenv from "dotenv";
-// import { GoogleGenerativeAI } from "@google/generative-ai";
 import cors from "cors";
 import multer from "multer";
-import fs from "fs";
+
 import { MongoClient, ObjectId } from "mongodb";
 import OpenAI from "openai";
+import { createClient } from "@deepgram/sdk";
 
 dotenv.config();
 
@@ -14,7 +14,12 @@ export const app = express();
 app.use(express.json());
 app.use(cors());
 
-const uri = process.env.DB_URL; // replace with your MongoDB URI
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+const deepgram = createClient(process.env.DEEPGRAM_API_KEY);
+
+const uri = process.env.DB_URL;
+
 const client = new MongoClient(uri);
 
 let db;
@@ -30,26 +35,17 @@ async function connectDB() {
 }
 
 connectDB();
+
 const storage = multer.memoryStorage();
 
 const upload = multer({ storage });
-// const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-// const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 app.get("/", (req, res) => res.send("ACE IELTS Server is Running OK!"));
 
 app.get("/exam/question", async (req, res) => {
-  const answer = await db?.collection("questions").findOne();
+  const answer = await db?.collection("questions").findOne({});
   res.send({ answer });
 });
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-import { createClient } from "@deepgram/sdk";
-
-// import router from "./app/routes/route";
-
-const deepgram = createClient(process.env.DEEPGRAM_API_KEY);
-// app.use("/api/v1", router);
 
 app.get("/evaluate-speaking", async (req, res) => {
   try {
